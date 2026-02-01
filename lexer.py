@@ -11,7 +11,16 @@ class Lexer:
         "return", "new", "private", "this"
     }
 
-    SYMBOLS = "{}();,+-*/=<>\n"
+    OPERATORS = {
+        "+", "-", "*", "/", "=",
+        "<", ">", "<=", ">=", "==", "!=",
+        "&&", "||"
+    }
+
+    PUNCTUATION = {
+        "(", ")", "{", "}", "[", "]",
+        ";", ",", "."
+    }
 
     def __init__(self, source_code):
         self.source = source_code
@@ -24,6 +33,11 @@ class Lexer:
     def peek(self):
         if self.position < len(self.source):
             return self.source[self.position]
+        return None
+
+    def _next_char(self):
+        if self.position + 1 < len(self.source):
+            return self.source[self.position + 1]
         return None
 
     def advance(self):
@@ -70,40 +84,36 @@ class Lexer:
                 self._tokenize_string()
                 continue
 
-            # Symbols
+            two_char = char + (self._next_char() or "")
+            if two_char in self.OPERATORS:
+                start_col = self.column
+                self.advance()
+                self.advance()
+                self.tokens.append(
+                    Token("OPERATOR", two_char, self.line, start_col)
+                )
+                continue
+
+            if char in self.OPERATORS:
+                start_col = self.column
+                self.tokens.append(
+                    Token("OPERATOR", self.advance(), self.line, start_col)
+                )
+                continue
+
+            if char in self.PUNCTUATION:
+                start_col = self.column
+                self.tokens.append(
+                    Token("PUNCTUATION", self.advance(), self.line, start_col)
+                )
+                continue
+
+            start_col = self.column
             self.tokens.append(
-                Token("SYMBOL", self.advance(), self.line, self.column)
+                Token("UNKNOWN", self.advance(), self.line, start_col)
             )
 
         return self.tokens
-    
-    def _skip_line_comment(self):
-        # Consume "//"
-        self.advance()
-        self.advance()
-
-        # Skip until end of line
-        while self.peek() and self.peek() != "\n":
-            self.advance()
-
-    def _skip_block_comment(self):
-        # Consume "/*"
-        self.advance()
-        self.advance()
-
-        while self.peek():
-            if self.peek() == "*" and self._next_char() == "/":
-                self.advance()  # *
-                self.advance()  # /
-                break
-            else:
-                self.advance()
-
-
-    def _next_char(self):
-        if self.position + 1 < len(self.source):
-            return self.source[self.position + 1]
-        return None
 
     def _tokenize_identifier(self):
         start_col = self.column
@@ -144,6 +154,23 @@ class Lexer:
 
         self.tokens.append(Token("STRING", lexeme, self.line, start_col))
 
-    def _skip_comment(self):
+    def _skip_line_comment(self):
+        # Consume "//"
+        self.advance()
+        self.advance()
+
         while self.peek() and self.peek() != "\n":
             self.advance()
+
+    def _skip_block_comment(self):
+        # Consume "/*"
+        self.advance()
+        self.advance()
+
+        while self.peek():
+            if self.peek() == "*" and self._next_char() == "/":
+                self.advance()  # *
+                self.advance()  # /
+                break
+            else:
+                self.advance()

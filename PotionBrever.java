@@ -1,4 +1,4 @@
-public class archive {
+public class PotionBrever {
     // Ingredient costs in gold coins
     private static final double HERB_PRICE = 5.50;
     private static final int MUSHROOM_PRICE = 3;
